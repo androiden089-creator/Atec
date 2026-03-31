@@ -1,0 +1,98 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: companies
+    // Document ID: {cnpj}
+    // Fields:
+    //   - cnpj: string (required)
+    //   - name: string (required)
+    //   - address: string (required)
+    //   - cep: string (required)
+    //   - email: string (required)
+    //   - phone: string (required)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: budget_requests
+    // Document ID: {requestId}
+    // Fields:
+    //   - companyId: string (required)
+    //   - responsibleName: string (required)
+    //   - responsibleEmail: string (required)
+    //   - responsiblePhone: string (required)
+    //   - description: string (required)
+    //   - createdAt: timestamp (required)
+    //   - status: string (required)
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.email == "kaiotrajano14@gmail.com" && request.auth.token.email_verified == true;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidCompany(data) {
+      return hasRequiredFields(['cnpj', 'name', 'address', 'cep', 'email', 'phone', 'createdAt']) &&
+             hasOnlyAllowedFields(['cnpj', 'name', 'address', 'cep', 'email', 'phone', 'createdAt']) &&
+             data.cnpj is string && data.cnpj.size() == 14 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.address is string && data.address.size() > 0 && data.address.size() < 200 &&
+             data.cep is string && data.cep.size() > 0 && data.cep.size() < 20 &&
+             isValidEmail(data.email) &&
+             data.phone is string && data.phone.size() > 0 && data.phone.size() < 20 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidBudgetRequest(data) {
+      return hasRequiredFields(['companyId', 'responsibleName', 'responsibleEmail', 'responsiblePhone', 'description', 'createdAt', 'status']) &&
+             hasOnlyAllowedFields(['companyId', 'responsibleName', 'responsibleEmail', 'responsiblePhone', 'description', 'createdAt', 'status']) &&
+             data.companyId is string && data.companyId.size() == 14 &&
+             data.responsibleName is string && data.responsibleName.size() > 0 && data.responsibleName.size() < 100 &&
+             isValidEmail(data.responsibleEmail) &&
+             data.responsiblePhone is string && data.responsiblePhone.size() > 0 && data.responsiblePhone.size() < 20 &&
+             data.description is string && data.description.size() > 0 && data.description.size() < 2000 &&
+             data.createdAt is timestamp &&
+             data.status in ['pending', 'reviewed'];
+    }
+
+    match /companies/{cnpj} {
+      // Anyone can get a company by CNPJ to check if it exists
+      allow get: if true;
+      // Nobody can list all companies
+      allow list: if isAdmin();
+      // Anyone can create a company
+      allow create: if isValidCompany(request.resource.data) && request.resource.data.cnpj == cnpj;
+      // Nobody can update or delete
+      allow update, delete: if isAdmin();
+    }
+
+    match /budget_requests/{requestId} {
+      // Admin can read all requests
+      allow read: if isAdmin();
+      // Anyone can create a request
+      allow create: if isValidBudgetRequest(request.resource.data);
+      // Admin can update status
+      allow update: if isAdmin() && isValidBudgetRequest(request.resource.data);
+      // Nobody can delete
+      allow delete: if isAdmin();
+    }
+  }
+}

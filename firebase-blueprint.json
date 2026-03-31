@@ -1,0 +1,44 @@
+{
+  "entities": {
+    "Company": {
+      "title": "Company",
+      "description": "A company registered in the system.",
+      "type": "object",
+      "properties": {
+        "cnpj": { "type": "string", "description": "CNPJ of the company (used as ID)" },
+        "name": { "type": "string", "description": "Name of the company" },
+        "address": { "type": "string", "description": "Full address" },
+        "cep": { "type": "string", "description": "CEP" },
+        "email": { "type": "string", "description": "Company email" },
+        "phone": { "type": "string", "description": "Company phone" },
+        "createdAt": { "type": "timestamp", "description": "Creation timestamp" }
+      },
+      "required": ["cnpj", "name", "address", "cep", "email", "phone", "createdAt"]
+    },
+    "BudgetRequest": {
+      "title": "BudgetRequest",
+      "description": "A budget request made by a company.",
+      "type": "object",
+      "properties": {
+        "companyId": { "type": "string", "description": "CNPJ of the company" },
+        "responsibleName": { "type": "string", "description": "Name of the responsible person" },
+        "responsibleEmail": { "type": "string", "description": "Email of the responsible person" },
+        "responsiblePhone": { "type": "string", "description": "Phone of the responsible person" },
+        "description": { "type": "string", "description": "Description of the request" },
+        "createdAt": { "type": "timestamp", "description": "Creation timestamp" },
+        "status": { "type": "string", "description": "Status of the request (e.g., pending, reviewed)" }
+      },
+      "required": ["companyId", "responsibleName", "responsibleEmail", "responsiblePhone", "description", "createdAt", "status"]
+    }
+  },
+  "firestore": {
+    "/companies/{cnpj}": {
+      "schema": { "$ref": "#/entities/Company" },
+      "description": "Companies registered in the system."
+    },
+    "/budget_requests/{requestId}": {
+      "schema": { "$ref": "#/entities/BudgetRequest" },
+      "description": "Budget requests made by companies."
+    }
+  }
+}
